@@ -12,22 +12,21 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 import os
 from pathlib import Path
 from datetime import timedelta
-import environ
+import dj_database_url
+import django_heroku
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 
 
-env = environ.Env()
-env.read_env(os.path.join(BASE_DIR,'.env'))
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('SECRET_KEY')
+SECRET_KEY = 'oh1-j5m3r7a4l4)6@3(s%4w-x1lk9d^2q4gh2rz(bi(t2ss+$w'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env('DEBUG')
+DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
@@ -108,10 +107,8 @@ SIMPLE_JWT = {
 # }
 
 DATABASES = {
-    'default': env.db(),
+    'default': dj_database_url.config(conn_max_age=600, ssl_require=True)
 }
-
-
 
 # Password validation
 # https://docs.djangoproject.com/en/3.1/ref/settings/#auth-password-validators
@@ -155,3 +152,5 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
 AUTH_USER_MODEL = 'api.User'
+
+django_heroku.settings(locals())
