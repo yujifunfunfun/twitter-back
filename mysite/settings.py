@@ -36,6 +36,7 @@ ALLOWED_HOSTS = ["mayichooseasongforyou-backend.herokuapp.com"]
 # Application definition
 
 INSTALLED_APPS = [
+    'whitenoise.runserver_nostatic',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -57,12 +58,15 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
+# CORS_ORIGIN_WHITELIST = [
+#     "http://localhost:3000"
+# ]
 CORS_ORIGIN_WHITELIST = [
-    "http://localhost:3000"
+    "https://mayichooseasongforyou-frontend.vercel.app/"
 ]
-
 
 ROOT_URLCONF = 'mysite.urls'
 
@@ -152,6 +156,9 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
+
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 
 AUTH_USER_MODEL = 'api.User'
 
