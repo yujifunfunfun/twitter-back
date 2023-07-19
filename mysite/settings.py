@@ -63,7 +63,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'cloudinary_storage.middleware.CloudinaryFileMiddleware',
+    # 'cloudinary_storage.middleware.CloudinaryFileMiddleware',
     ]
 
 # CORS_ORIGIN_WHITELIST = [
@@ -171,7 +171,13 @@ django_heroku.settings(locals())
 
 # Cloudinaryの設定
 cloudinary.config(
-    cloud_name='jwanderson',
-    api_key='958435128361973',
-    api_secret='Yx0UUlMPr22ddmoBkjuSPwS7Z4I'
-)
+#     cloud_name='jwanderson',
+#     api_key='958435128361973',
+#     api_secret='Yx0UUlMPr22ddmoBkjuSPwS7Z4I'
+# )
+
+CLOUDINARY_STORAGE  = {
+    'CLOUD_NAME':'jwanderson',
+    'API_KEY': '958435128361973',
+    'API_SECRET': 'Yx0UUlMPr22ddmoBkjuSPwS7Z4I'
+}
