@@ -123,7 +123,8 @@ class PlaylistView(APIView):
     def get(self, request, playlist_id):
         audio_features_mean = analyse_playlist(playlist_id)
         playlist_url = "https://open.spotify.com/playlist/" + playlist_id
-        AudioFeatures.objects.update_or_create(playlist=playlist_url, defaults={'acousticness': audio_features_mean[0], "danceability": audio_features_mean[1], "energy": audio_features_mean[2], "instrumentalness": audio_features_mean[3], "key": audio_features_mean[4], "danceability": audio_features_mean[1], "liveness": audio_features_mean[5], "loudness": audio_features_mean[6], "mode": audio_features_mean[7], "speechiness": audio_features_mean[8], "tempo": audio_features_mean[9], "time_signature": audio_features_mean[10], "valence": audio_features_mean[11]})
+        anarysed_playlist = Playlist.objects.get(url=playlist_url)
+        AudioFeatures.objects.update_or_create(playlist=anarysed_playlist, defaults={'acousticness': audio_features_mean[0], "danceability": audio_features_mean[1], "energy": audio_features_mean[2], "instrumentalness": audio_features_mean[3], "key": audio_features_mean[4], "danceability": audio_features_mean[1], "liveness": audio_features_mean[5], "loudness": audio_features_mean[6], "mode": audio_features_mean[7], "speechiness": audio_features_mean[8], "tempo": audio_features_mean[9], "time_signature": audio_features_mean[10], "valence": audio_features_mean[11]})
 
         return Response(audio_features_mean)
 

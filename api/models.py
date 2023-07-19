@@ -1,16 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.conf import settings
+import cloudinary
+from cloudinary.models import CloudinaryField
 
-
-def upload_avatar_path(instance, filename):
-    ext = filename.split('.')[-1]
-    return '/'.join(['avatars', str(instance.userProfile.id)+str(instance.nickName)+str(".")+str(ext)])
-
-
-def upload_post_path(instance, filename):
-    ext = filename.split('.')[-1]
-    return '/'.join(['posts', str(instance.userPost.id)+str(instance.description)+str(".")+str(ext)])
 
 
 class UserManager(BaseUserManager):
@@ -57,7 +50,8 @@ class User(AbstractBaseUser, PermissionsMixin):
 class Profile(models.Model):
     nickName = models.CharField(max_length=50)
     userProfile = models.OneToOneField(settings.AUTH_USER_MODEL, related_name="userProfile", on_delete=models.CASCADE)
-    img = models.ImageField(blank=True, null=True, upload_to=upload_avatar_path)
+    # img = models.ImageField(blank=True, null=True, upload_to=upload_avatar_path)
+    img = CloudinaryField('image', blank=True, null=True)
     fav_music_genre = models.CharField(max_length=50, blank=True, null=True)
 
     def __str__(self):
@@ -93,7 +87,8 @@ class Post(models.Model):
     )
     description = models.TextField()
     created_on = models.DateTimeField(auto_now_add=True)
-    img = models.ImageField(blank=True, null=True, upload_to=upload_post_path)
+    # img = models.ImageField(blank=True, null=True, upload_to=upload_post_path)
+    img = CloudinaryField('image', blank=True, null=True)
     playlist = models.ForeignKey(Playlist, related_name='Posts', on_delete=models.CASCADE,db_column='playlist_url', to_field='url')
     liked = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='liked',blank=True)
     genre = models.CharField(max_length=50)

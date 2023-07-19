@@ -14,6 +14,9 @@ from pathlib import Path
 from datetime import timedelta
 import dj_database_url
 import django_heroku
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
@@ -43,6 +46,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'cloudinary_storage',
+    'cloudinary',
     'rest_framework',
     'djoser',
     'api.apps.ApiConfig',
@@ -158,8 +163,15 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 AUTH_USER_MODEL = 'api.User'
 
 django_heroku.settings(locals())
+
+# Cloudinaryの設定
+cloudinary.config(
+    cloud_name='jwanderson',
+    api_key='958435128361973',
+    api_secret='Yx0UUlMPr22ddmoBkjuSPwS7Z4I'
+)

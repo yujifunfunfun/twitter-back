@@ -68,16 +68,16 @@ def analyse_playlist(playlist_id):
 
     danceability_mean = round(statistics.mean(danceability_list) * 100)
     energy_mean = round(statistics.mean(energy_list) * 100)
-    key_mean = statistics.mean(key_list)
+    key_mean = round(statistics.mean(key_list), 2)
     loudness_mean = round(statistics.mean(loudness_list), 2)
-    mode_mean = statistics.mean(mode_list)
+    mode_mean = round(statistics.mean(mode_list), 2)
     speechiness_mean = round(statistics.mean(speechiness_list) * 100)
     acousticness_mean = round(statistics.mean(acousticness_list) * 100)
     instrumentalness_mean = round(statistics.mean(instrumentalness_list) * 100)
     liveness_mean = round(statistics.mean(liveness_list) * 100)
     valence_mean = round(statistics.mean(valence_list) * 100)
     tempo_mean = round(statistics.mean(tempo_list), 2)
-    time_signature_mean = statistics.mean(time_signature_list)
+    time_signature_mean = round(statistics.mean(time_signature_list), 2)
 
     audio_features_mean = [acousticness_mean, danceability_mean, energy_mean, instrumentalness_mean, key_mean, liveness_mean, loudness_mean, mode_mean, speechiness_mean, tempo_mean, time_signature_mean, valence_mean]
     return audio_features_mean
