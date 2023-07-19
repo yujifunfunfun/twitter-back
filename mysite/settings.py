@@ -63,8 +63,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-]
+    'cloudinary_storage.middleware.CloudinaryFileMiddleware',
+    ]
 
 # CORS_ORIGIN_WHITELIST = [
 #     "http://localhost:3000"
