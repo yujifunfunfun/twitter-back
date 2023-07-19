@@ -50,7 +50,6 @@ class User(AbstractBaseUser, PermissionsMixin):
 class Profile(models.Model):
     nickName = models.CharField(max_length=50)
     userProfile = models.OneToOneField(settings.AUTH_USER_MODEL, related_name="userProfile", on_delete=models.CASCADE)
-    # img = models.ImageField(blank=True, null=True, upload_to=upload_avatar_path)
     img = CloudinaryField('image', blank=True, null=True)
     fav_music_genre = models.CharField(max_length=50, blank=True, null=True)
 

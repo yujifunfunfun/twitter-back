@@ -70,7 +70,7 @@ MIDDLEWARE = [
 #     "http://localhost:3000"
 # ]
 CORS_ORIGIN_WHITELIST = [
-    "https://mayichooseasongforyou-frontend.vercel.app/"
+    "https://mayichooseasongforyou-frontend.vercel.app"
 ]
 
 ROOT_URLCONF = 'mysite.urls'
