@@ -2,60 +2,12 @@ from rest_framework import generics
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny
 from . import serializers
-from .models import Profile, Post, Comment, Playlist, AudioFeatures
+from .models import Profile, Post, Comment
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .spotify import analyse_playlist, get_audio_features, search_audio_from_playlist
-import re
 from rest_framework import status
-
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.urls import reverse_lazy
-from django.http import HttpResponseRedirect
-from .models import Connection, User
-from .serializers import UserSerializer, ConnectionSerializer
-
-
-"""フォロー"""
-class FollowView(APIView):
-    def post(self, request, format=None):
-        follower_id = int(request.data.get('follower'))
-        following_id = int(request.data.get('following'))
-        follow_data = {'follower': follower_id, 'following': following_id}
-        serializer = ConnectionSerializer(data=follow_data)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-"""フォロー解除"""
-class UnfollowView(APIView):
-    def post(self, request, format=None):
-        follower_id = request.data.get('follower')
-        following_id = request.data.get('following')
-
-        try:
-            follower = Profile.objects.get(id=follower_id)
-            following = Profile.objects.get(id=following_id)
-        except Profile.DoesNotExist:
-            return Response({'error': 'Invalid user ID'}, status=status.HTTP_404_NOT_FOUND)
-
-        try:
-            follow = Connection.objects.get(follower=follower, following=following)
-        except Connection.DoesNotExist:
-            return Response({'error': 'Follow relationship does not exist'}, status=status.HTTP_404_NOT_FOUND)
-
-        follow.delete()
-
-        return Response({'message': 'Unfollowed successfully'}, status=status.HTTP_200_OK)
-
-
-
-
+from .models import Connection
+from django.db.models import Q
 
 
 class CreateUserView(generics.CreateAPIView):
@@ -63,12 +15,28 @@ class CreateUserView(generics.CreateAPIView):
     permission_classes = (AllowAny,)
 
 
+class MyUserView(APIView):
+    def get(self, request):
+        serializer = serializers.UserSerializer(request.user)
+        return Response(serializer.data)
+
+
+class MyProfileView(APIView):
+    def get(self, request):
+        profile = request.user.profile
+        serializer = serializers.ProfileSerializer(profile)
+        return Response(serializer.data)
+
+
 class ProfileViewSet(viewsets.ModelViewSet):
     queryset = Profile.objects.all()
     serializer_class = serializers.ProfileSerializer
 
     def perform_create(self, serializer):
-        serializer.save(userProfile=self.request.user)
+        serializer.save(user=self.request.user)
+    def update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return super().update(request, *args, **kwargs)
 
 
 class MyProfileListView(generics.ListAPIView):
@@ -76,90 +44,64 @@ class MyProfileListView(generics.ListAPIView):
     serializer_class = serializers.ProfileSerializer
 
     def get_queryset(self):
-        return self.queryset.filter(userProfile=self.request.user)
+        return self.queryset.filter(user=self.request.user)
 
 
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = serializers.PostSerializer
 
-    def perform_create(self, serializer):
-        serializer.save(userPost=self.request.user)
+    def create(self, request, *args, **kwargs):
+        user_id = self.request.user.id
+        data = request.data
+        text = data.get('text', None)
+        img = data.get('img', None)
+        if text or img:
+            post = Post.objects.create(user_id=user_id, text=text, img=img)
+            return Response({"message": "投稿に成功しました"}, status=status.HTTP_201_CREATED)
+
+        return Response({"error": "投稿を作成してください"}, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return super().update(request, *args, **kwargs)
+
+
+class RecommendPostListView(generics.ListAPIView):
+    queryset = Post.objects.all()
+    serializer_class = serializers.PostsSerializer
+    def get_queryset(self):
+        return Post.objects.all().order_by('-posted_at')[:10]
+
+
+class LikedViewSet(viewsets.ModelViewSet):
+    queryset = Post.objects.all()
+    serializer_class = serializers.LikedSerializer
 
 
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
     serializer_class = serializers.CommentSerializer
 
-    def perform_create(self, serializer):
-        serializer.save(userComment=self.request.user)
-
-
-class PlaylistViewSet(viewsets.ModelViewSet):
-    queryset = Playlist.objects.all()
-    serializer_class = serializers.PlaylistSerializer
-
-    def perform_create(self, serializer):
-        serializer.save(userPlaylist=self.request.user)
-
-
-class MyPlaylistListView(generics.ListAPIView):
-    queryset = Playlist.objects.all()
-    serializer_class = serializers.PlaylistSerializer
-
     def get_queryset(self):
-        return self.queryset.filter(userPlaylist=self.request.user)
+        post_id = self.request.query_params.get('post_id')
+        if post_id:
+            # Qオブジェクトを使用してor条件を作成
+            queryset = Comment.objects.filter(post=post_id)
+        else:
+            queryset = Comment.objects.all()
 
-
-class AudioFeaturesViewSet(viewsets.ModelViewSet):
-    queryset = AudioFeatures.objects.all()
-    serializer_class = serializers.AudioFeaturesSerializer
+        return queryset
 
     def perform_create(self, serializer):
-        serializer.save(playlist=self.request.POST["playlist"])
+        serializer.save(user=self.request.user)
 
+class MyFollowingListView(APIView):
+    def get(self, request, format=None):
+        userId=self.request.user
 
-class PlaylistView(APIView):
-    def get(self, request, playlist_id):
-        audio_features_mean = analyse_playlist(playlist_id)
-        playlist_url = "https://open.spotify.com/playlist/" + playlist_id
-        anarysed_playlist = Playlist.objects.get(url=playlist_url)
-        AudioFeatures.objects.update_or_create(playlist=anarysed_playlist, defaults={'acousticness': audio_features_mean[0], "danceability": audio_features_mean[1], "energy": audio_features_mean[2], "instrumentalness": audio_features_mean[3], "key": audio_features_mean[4], "danceability": audio_features_mean[1], "liveness": audio_features_mean[5], "loudness": audio_features_mean[6], "mode": audio_features_mean[7], "speechiness": audio_features_mean[8], "tempo": audio_features_mean[9], "time_signature": audio_features_mean[10], "valence": audio_features_mean[11]})
-
-        return Response(audio_features_mean)
-
-
-class AudioAnaliseView(APIView):
-    def get(self, request, track_id):
-        audio_features_list = []
-        audio_features = get_audio_features(track_id)
-        audio_features_list.append(round(audio_features['acousticness'] * 100))
-        audio_features_list.append(round(audio_features['danceability'] * 100))
-        audio_features_list.append(round(audio_features['energy'] * 100))
-        audio_features_list.append(round(audio_features['instrumentalness'] * 100))
-        audio_features_list.append(audio_features['key'])
-        audio_features_list.append(round(audio_features['liveness'] * 100))
-        audio_features_list.append(round(audio_features['loudness'], 2))
-        audio_features_list.append(audio_features['mode'])
-        audio_features_list.append(round(audio_features['speechiness'] * 100))
-        audio_features_list.append(round(audio_features['tempo'], 2))
-        audio_features_list.append(audio_features['time_signature'])
-        audio_features_list.append(round(audio_features['valence'] * 100))
-
-        return Response(audio_features_list)
-
-
-class SearchAudioFromPlaylistView(APIView):
-    def get(self, request, track_id, playlist_id):
-        similar_audio_list = search_audio_from_playlist(track_id, playlist_id)
-
-        return Response(similar_audio_list)
-
-
-class MyFollowingListView(generics.ListAPIView):
-    def get(self, request, myprofile_id, format=None):
         try:
-            myprofile = Profile.objects.get(id=myprofile_id)
+            myprofile = Profile.objects.get(user=userId)
         except Profile.DoesNotExist:
             return Response({'error': 'Invalid  ID'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -183,28 +125,63 @@ class MyFollowerListView(generics.ListAPIView):
 
 
 # フォローしてる人のID
-class FollowingListView(APIView):
-    def get(self, request, user_id, format=None):
-        try:
-            user = Profile.objects.get(id=user_id)
-        except Profile.DoesNotExist:
-            return Response({'error': 'Invalid user ID'}, status=status.HTTP_404_NOT_FOUND)
+class FollowingListView(generics.ListAPIView):
+    serializer_class = serializers.ProfileSerializer
 
-        following_list = Connection.objects.filter(follower=user).values_list('following', flat=True)
-        following_ids = list(following_list)
-
-        return Response(following_ids)
+    def get_queryset(self):
+        profile_id = self.request.query_params.get('profile_id')
+        userProfile = Profile.objects.get(id=profile_id)
+        following_ids = Connection.objects.filter(follower=userProfile).values_list('following', flat=True)
+        followingProfiles = Profile.objects.filter(id__in=following_ids)
+        return followingProfiles
 
 
 # フォロワーのID
-class FollowerListView(APIView):
-    def get(self, request, user_id, format=None):
+class FollowerListView(generics.ListAPIView):
+    serializer_class = serializers.ProfileSerializer
+
+    def get_queryset(self):
+        profile_id = self.request.query_params.get('profile_id')
+        userProfile = Profile.objects.get(id=profile_id)
+        follower_ids = Connection.objects.filter(following=userProfile).values_list('follower', flat=True)
+        followerProfiles = Profile.objects.filter(id__in=follower_ids)
+        return followerProfiles
+
+
+
+"""フォロー"""
+class FollowView(APIView):
+    def post(self, request, format=None):
+        follower_id = Profile.objects.get(user=self.request.user).id
+        following_id = int(request.data.get('following'))
+        follow_data = {'follower': follower_id, 'following': following_id}
+        serializer = serializers.ConnectionSerializer(data=follow_data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+"""フォロー解除"""
+class UnfollowView(APIView):
+    def post(self, request, format=None):
+        follower_id = Profile.objects.get(user=self.request.user).id
+        following_id = request.data.get('following')
+
         try:
-            user = Profile.objects.get(id=user_id)
+            follower = Profile.objects.get(id=follower_id)
+            following = Profile.objects.get(id=following_id)
         except Profile.DoesNotExist:
             return Response({'error': 'Invalid user ID'}, status=status.HTTP_404_NOT_FOUND)
 
-        follower_list = Connection.objects.filter(following=user).values_list('follower', flat=True)
-        follower_ids = list(follower_list)
+        try:
+            follow = Connection.objects.get(follower=follower, following=following)
+        except Connection.DoesNotExist:
+            return Response({'error': 'Follow relationship does not exist'}, status=status.HTTP_404_NOT_FOUND)
 
-        return Response(follower_ids)
+        follow.delete()
+
+        return Response({'message': 'Unfollowed successfully'}, status=status.HTTP_200_OK)
+

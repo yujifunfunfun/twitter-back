@@ -1,131 +1,68 @@
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.conf import settings
-import cloudinary
-from cloudinary.models import CloudinaryField
+from django.contrib.auth.models import AbstractUser
+import uuid
 
 
+class CustomUser(AbstractUser):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    phone_number = models.CharField(max_length=11, blank=True, null=True)
 
-class UserManager(BaseUserManager):
-    def create_user(self, email, password=None):
-        if not email:
-            raise ValueError('Users must have an email address')
-
-        user = self.model(
-            email=self.normalize_email(email),
-        )
-
-        user.set_password(password)
-        user.save(using=self._db)
-        return user
-
-    def create_superuser(self, email, password):
-        user = self.create_user(
-            email,
-            password,
-        )
-        user.is_staff = True
-        user.is_superuser = True
-        user.save(using=self._db)
-        return user
-
-
-class User(AbstractBaseUser, PermissionsMixin):
-    email = models.EmailField(
-        verbose_name='email',
-        max_length=50,
-        unique=True,
-    )
-    is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False)
-
-    objects = UserManager()
-
-    USERNAME_FIELD = 'email'
-
+    class Meta:
+        ordering = ['username']
     def __str__(self):
-        return self.email
+        return self.username
 
 
 class Profile(models.Model):
-    nickName = models.CharField(max_length=50)
-    userProfile = models.OneToOneField(settings.AUTH_USER_MODEL, related_name="userProfile", on_delete=models.CASCADE)
-    img = CloudinaryField('image', blank=True, null=True)
-    fav_music_genre = models.CharField(max_length=50, blank=True, null=True)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, related_name="profile", on_delete=models.CASCADE)
+    name = models.CharField(max_length=50)
+    profile_img = models.ImageField(blank=True, null=True)
+    header_img = models.ImageField(blank=True, null=True)
+    bio = models.TextField(blank=True, null=True)
 
+    class Meta:
+        ordering = ['name']
     def __str__(self):
-        return self.nickName
+        return self.name
 
 
 class Connection(models.Model):
     follower = models.ForeignKey(Profile, related_name='follower', on_delete=models.CASCADE)
     following = models.ForeignKey(Profile, related_name='following', on_delete=models.CASCADE)
-    date_created = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return "{} : {}".format(self.follower.nickName, self.following.nickName)
+        return "{} : {}".format(self.follower.name, self.following.name)
 # follower→フォローボタンを押した人
 
 
-class Playlist(models.Model):
-    userPlaylist = models.ForeignKey(
-        settings.AUTH_USER_MODEL, related_name='userPlaylist',
-        on_delete=models.CASCADE
-    )
-    title = models.CharField(max_length=100)
-    url = models.CharField(max_length=200, unique=True)
-
-    def __str__(self):
-        return self.title
-
-
 class Post(models.Model):
-    userPost = models.ForeignKey(
-        settings.AUTH_USER_MODEL, related_name='userPost',
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, related_name='post',
         on_delete=models.CASCADE
     )
-    description = models.TextField()
-    created_on = models.DateTimeField(auto_now_add=True)
-    # img = models.ImageField(blank=True, null=True, upload_to=upload_post_path)
-    img = CloudinaryField('image', blank=True, null=True)
-    playlist = models.ForeignKey(Playlist, related_name='Posts', on_delete=models.CASCADE,db_column='playlist_url', to_field='url')
+    text = models.TextField(blank=True, null=True)
+    img = models.ImageField(blank=True, null=True)
     liked = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='liked',blank=True)
-    genre = models.CharField(max_length=50)
+    posted_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return self.description
-
-
-class Comment(models.Model):
-    text = models.CharField(max_length=100)
-    userComment = models.ForeignKey(
-        settings.AUTH_USER_MODEL, related_name='userComment',
-        on_delete=models.CASCADE
-    )
-    post = models.ForeignKey(Post, on_delete=models.CASCADE)
-
+    class Meta:
+        ordering = ['posted_at']
     def __str__(self):
         return self.text
 
 
-class AudioFeatures(models.Model):
-    playlist = models.ForeignKey(
-        Playlist, related_name='AudioFeatures',
-        on_delete=models.CASCADE,
-        db_column='playlist_url', to_field='url'
+class Comment(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, related_name='comment',
+        on_delete=models.CASCADE
     )
-    acousticness = models.FloatField()
-    danceability = models.FloatField()
-    energy = models.FloatField()
-    instrumentalness = models.FloatField()
-    key = models.FloatField()
-    liveness = models.FloatField()
-    loudness = models.FloatField()
-    mode = models.FloatField()
-    speechiness = models.FloatField()
-    tempo = models.FloatField()
-    time_signature = models.FloatField()
-    valence = models.FloatField()
+    post = models.ForeignKey(Post, related_name='comment', on_delete=models.CASCADE)
+    text = models.CharField(max_length=100)
+    commented_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ['commented_at']
     def __str__(self):
-        return self.playlist.title
+        return self.text
