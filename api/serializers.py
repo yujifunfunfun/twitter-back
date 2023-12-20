@@ -2,7 +2,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from .models import Profile, Post, Comment, Connection
-
+import pytz
 
 class UserSerializer(serializers.ModelSerializer):
 
@@ -44,22 +44,11 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class PostSerializer(serializers.ModelSerializer):
-    name = serializers.CharField(source='user.profile.name', read_only=True)
-    profile_id = serializers.CharField(source='user.profile.id', read_only=True)
-    profile_img = serializers.ImageField(source='user.profile.profile_img', read_only=True)
-    comments = CommentSerializer(many=True, source='user', read_only=True)
-
-    class Meta:
-        model = Post
-        fields = '__all__'
-        extra_kwargs = {'user': {'read_only': True}}
-
-class PostsSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
     name = serializers.CharField(source='user.profile.name', read_only=True)
     profile_id = serializers.CharField(source='user.profile.id', read_only=True)
     profile_img = serializers.ImageField(source='user.profile.profile_img', read_only=True)
-    comment_count = serializers.SerializerMethodField()
+    reply_posts_count = serializers.SerializerMethodField()
     posted_at = serializers.SerializerMethodField()
 
     class Meta:
@@ -67,10 +56,14 @@ class PostsSerializer(serializers.ModelSerializer):
         fields = '__all__'
         extra_kwargs = {'user': {'read_only': True}}
 
-    def get_comment_count(self, obj):
-        return obj.comment.count()
+    def get_reply_posts_count(self, obj):
+        if obj.reply_posts is None:
+            return 0
+        return obj.reply_posts.count()
     def get_posted_at(self, obj):
-        return obj.posted_at.strftime('%m月%d日')
+        japan = pytz.timezone('Asia/Tokyo')
+        posted_at_japan = obj.posted_at.astimezone(japan)
+        return posted_at_japan.strftime('%m月%d日 %H時%M分')
 
 class LikedSerializer(serializers.ModelSerializer):
 

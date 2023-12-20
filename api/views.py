@@ -51,16 +51,19 @@ class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = serializers.PostSerializer
 
-    def create(self, request, *args, **kwargs):
-        user_id = self.request.user.id
-        data = request.data
-        text = data.get('text', None)
-        img = data.get('img', None)
-        if text or img:
-            post = Post.objects.create(user_id=user_id, text=text, img=img)
-            return Response({"message": "投稿に成功しました"}, status=status.HTTP_201_CREATED)
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
-        return Response({"error": "投稿を作成してください"}, status=status.HTTP_400_BAD_REQUEST)
+    # def create(self, request, *args, **kwargs):
+    #     user_id = self.request.user.id
+    #     data = request.data
+    #     text = data.get('text', None)
+    #     img = data.get('img', None)
+    #     if text or img:
+    #         post = Post.objects.create(user_id=user_id, text=text, img=img)
+    #         return Response({"message": "投稿に成功しました"}, status=status.HTTP_201_CREATED)
+
+    #     return Response({"error": "投稿を作成してください"}, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request, *args, **kwargs):
         kwargs['partial'] = True
@@ -69,7 +72,7 @@ class PostViewSet(viewsets.ModelViewSet):
 
 class RecommendPostListView(generics.ListAPIView):
     queryset = Post.objects.all()
-    serializer_class = serializers.PostsSerializer
+    serializer_class = serializers.PostSerializer
     def get_queryset(self):
         return Post.objects.all().order_by('-posted_at')[:10]
 
