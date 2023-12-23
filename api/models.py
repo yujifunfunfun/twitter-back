@@ -46,8 +46,7 @@ class Post(models.Model):
     img = models.ImageField(blank=True, null=True)
     liked = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='liked',blank=True)
     posted_at = models.DateTimeField(auto_now_add=True)
-    reply_posts = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
-
+    parent_post = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='reply_posts')
     class Meta:
         ordering = ['posted_at']
     def __str__(self):

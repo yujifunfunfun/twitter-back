@@ -16,6 +16,7 @@ urlpatterns = [
     path('users/me/', views.MyUserView.as_view(), name='user-me'),
     path('profiles/me/', views.MyProfileView.as_view(), name='profile-me'),
     path('posts/recommended/', views.RecommendPostListView.as_view(), name='posts-recommended'),
+    path('posts/<str:post_id>/reply/', views.ReplyPostsView.as_view(), name='posts-reply'),
 
     path('',include(router.urls))
 ]

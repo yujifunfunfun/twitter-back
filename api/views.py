@@ -74,7 +74,28 @@ class RecommendPostListView(generics.ListAPIView):
     queryset = Post.objects.all()
     serializer_class = serializers.PostSerializer
     def get_queryset(self):
-        return Post.objects.all().order_by('-posted_at')[:10]
+        return Post.objects.filter(parent_post__isnull=True).order_by('-posted_at')[:10]
+
+class ReplyPostsView(APIView):
+    def get(self, request, post_id, format=None):
+        try:
+            post = Post.objects.get(id=post_id)
+            reply_posts = post.reply_posts.all().order_by('-posted_at')
+            serializer = serializers.PostSerializer(reply_posts, many=True)
+            return Response(serializer.data)
+        except Post.DoesNotExist:
+            return Response({"error": "Post not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    def post(self, request, post_id, format=None):
+        user_id = self.request.user.id
+        data = request.data
+        text = data.get('text', None)
+        img = data.get('img', None)
+        if text or img:
+            post = Post.objects.get(id=post_id)
+            Post.objects.create(user_id=user_id, text=text, img=img, parent_post=post)
+            return Response({"message": "投稿に成功しました"}, status=status.HTTP_201_CREATED)
+        return Response({"error": "投稿を作成してください"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class LikedViewSet(viewsets.ModelViewSet):
